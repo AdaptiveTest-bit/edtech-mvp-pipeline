@@ -1,5 +1,6 @@
-from typing import Any, Optional
-from pydantic import BaseModel
+from typing import Any, Optional,List
+from pydantic import BaseModel,EmailStr, Field
+
 
 
 class ChapterCreate(BaseModel):
@@ -30,6 +31,34 @@ class QuestionCreate(BaseModel):
 
 class ResponseModel(BaseModel):
     success: bool
-    message: str
-    data: Any
+    message: Optional[str]
+    data: Optional[Any]
     status_code: int
+
+# class AddressCreateRequest(BaseModel):
+#     street: Optional[str]
+#     city: Optional[str]
+#     state: Optional[str]
+#     pincode: str
+
+class ParentCreateRequest(BaseModel):
+    name: str
+    phone: str
+    email: Optional[EmailStr]
+
+
+# class Gender(Enum):
+#     MALE = 'MALE'
+#     FEMALE = "FEMALE"
+
+class StudentCreateRequest(BaseModel):
+    first_name: str
+    last_name: str
+    age: int = Field(..., ge=6, le=25)
+    phone: Optional[str]
+    email: EmailStr
+    gender: str 
+    standard: str
+    password: str
+    parent_details: Optional[ParentCreateRequest]
+
