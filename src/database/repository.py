@@ -1,7 +1,8 @@
 # db/models/curriculum.py
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, CheckConstraint, Index
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, CheckConstraint, Index, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from src.database.services import Base
 
@@ -74,3 +75,43 @@ class Question(Base):
     explanation = Column(Text, nullable=False)
     # many to one relationship with Concept
     concept = relationship("Concept", back_populates="questions")
+
+class Student(Base):
+    __tablename__ = "students"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    first_name = Column(String(255), nullable=False)
+    last_name = Column(String(255), nullable=False)
+    age = Column(Integer, nullable=False)
+    phone = Column(String(15))
+    email = Column(String(255), unique=True, nullable=False)
+    gender = Column(String(10))
+    standard = Column(String(20))
+    enrollment_date = Column(DateTime, server_default=func.now())
+    password_hash = Column(String(255), nullable=False)
+
+    parent = relationship(
+        "Parent",
+        back_populates="student",
+        uselist=False,
+        cascade="all, delete"
+    )
+
+
+class Parent(Base):
+    __tablename__ = "parents"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100))
+    phone = Column(String(15))
+    email = Column(String(100))
+
+    student_id = Column(
+        Integer,
+        ForeignKey("students.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False
+    )
+
+    student = relationship("Student", back_populates="parent")
+

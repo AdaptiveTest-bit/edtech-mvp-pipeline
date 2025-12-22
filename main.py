@@ -22,7 +22,6 @@ def get_application():
         allow_credentials=True,
     )
 
-    # Base.metadata.create_all(bind=engine)
     app.include_router(api_v1_router, prefix="/edu/v1")
     return app
 
