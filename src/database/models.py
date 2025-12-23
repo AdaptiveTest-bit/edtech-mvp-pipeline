@@ -61,4 +61,3 @@ class StudentCreateRequest(BaseModel):
     standard: str
     password: str
     parent_details: Optional[ParentCreateRequest]
-

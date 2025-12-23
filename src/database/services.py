@@ -6,10 +6,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
 # Database configuration
-RDS_DB_USERNAME = "gauravsingh"
+RDS_DB_USERNAME = "amritkarn"
 RDS_DB_PASSWORD = "root"
 RDS_DB_PORT = "5432"
-RDS_DB_NAME = "edtech_demo"
+RDS_DB_NAME = "my_database"
 RDS_DB_HOST = "localhost"
 
 # Construct the connection URL
@@ -24,8 +24,8 @@ Base = declarative_base()
 def db_session() -> Session:
     session = Session()
     try:
-        # Base.metadata.create_all(bind=engine)
-
+        # Schema creation is handled via Alembic migrations.
+        # Do not call `Base.metadata.create_all()` here so migrations manage DDL.
         yield session
     except SQLAlchemyError as e:
         session.rollback()
