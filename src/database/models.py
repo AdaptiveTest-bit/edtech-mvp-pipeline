@@ -33,3 +33,21 @@ class ResponseModel(BaseModel):
     message: str
     data: Any
     status_code: int
+
+
+class ParentCreate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class StudentCreateRequest(BaseModel):
+    first_name: str
+    last_name: str
+    age: int
+    phone: Optional[str] = None
+    email: str
+    gender: Optional[str] = None
+    standard: Optional[str] = None
+    password: str
+    parent_details: Optional[ParentCreate] = None
