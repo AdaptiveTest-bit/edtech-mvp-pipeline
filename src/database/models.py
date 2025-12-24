@@ -1,3 +1,14 @@
+from datetime import date
+# ...existing code...
+
+class DailyAnalyticsCreate(BaseModel):
+    student_id: int
+    analytics_date: date
+    questions_answered: int = 0
+    questions_correct: int = 0
+    xp_earned: int = 0
+    time_spent_minutes: int = 0
+    streak_count: int = 0
 from typing import Any, Optional,List
 from pydantic import BaseModel,EmailStr, Field
 
@@ -5,12 +16,15 @@ from pydantic import BaseModel,EmailStr, Field
 
 class ChapterCreate(BaseModel):
     name: str
-    sequence_order: int
-    unit_tag: Optional[str] = None
+    description: Optional[str] = None
+    subject: str
+    order: Optional[int] = None
+    is_locked: Optional[bool] = True
+    unlock_xp_required: Optional[int] = 0
 
 
 class TopicCreate(BaseModel):
-    chapter_id: int
+    chapter_id: str
     name: str
     description: Optional[str] = None
 
@@ -22,11 +36,15 @@ class ConceptCreate(BaseModel):
 
 
 class QuestionCreate(BaseModel):
-    concept_id: int
-    content: dict[str, Any]  # JSON payload
-    difficulty_level: int  # 1–3
-    correct_option_key: str
-    explanation: str
+    quiz_id: str
+    chapter_id: str
+    question_text: str
+    options: list[Any]
+    correct_answer_index: int
+    explanation: Optional[str] = None
+    image_url: Optional[str] = None
+    difficulty_level: Optional[str] = None
+    created_at: Optional[str] = None
 
 
 class ResponseModel(BaseModel):

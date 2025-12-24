@@ -6,10 +6,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session, sessionmaker
 
 # Database configuration
-RDS_DB_USERNAME = "amritkarn"
+RDS_DB_USERNAME = ""
 RDS_DB_PASSWORD = "root"
 RDS_DB_PORT = "5432"
-RDS_DB_NAME = "my_database"
+RDS_DB_NAME = ""
 RDS_DB_HOST = "localhost"
 
 # Construct the connection URL
