@@ -58,3 +58,5 @@ tzdata==2025.3
 urllib3==2.2.2
 uvicorn==0.40.0
 alembic==1.11.1
+passlib==1.7.4
+bcrypt-5.0.0
