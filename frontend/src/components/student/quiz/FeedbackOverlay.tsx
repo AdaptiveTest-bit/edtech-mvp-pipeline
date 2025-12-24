@@ -5,12 +5,14 @@ interface FeedbackOverlayProps {
   isCorrect: boolean;
   explanation: string;
   onNext: () => void;
+  xpEarned?: number;
 }
 
 export default function FeedbackOverlay({
   isCorrect,
   explanation,
   onNext,
+  xpEarned,
 }: FeedbackOverlayProps) {
   const [showConfetti, setShowConfetti] = useState(isCorrect);
   const [animate, setAnimate] = useState(false);
@@ -55,7 +57,9 @@ export default function FeedbackOverlay({
               <h2 className="text-3xl font-bold text-green-600 mt-6 mb-2">
                 Superstar!
               </h2>
-              <p className="text-xl font-semibold text-green-500">+10 XP</p>
+              <p className="text-xl font-semibold text-green-500">
+                +{xpEarned || 10} XP
+              </p>
             </div>
 
             {/* Confetti Placeholder */}

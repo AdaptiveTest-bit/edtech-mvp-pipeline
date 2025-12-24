@@ -1,128 +1,234 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import QuestionCard from "./QuestionCard";
 import FeedbackOverlay from "./FeedbackOverlay";
 import QuizProgress from "./QuizProgress";
+import {
+  getRandomQuestion,
+  submitAnswer,
+  type Question,
+  type SubmitAnswerResponse,
+} from "@/lib/api";
+import { useStudent } from "@/context/StudentContext";
 
-interface Question {
+// Type for our local question format (adapts API response to component format)
+interface LocalQuestion {
   id: number;
-  questionText: string;
-  imageUrl?: string;
-  options: string[];
-  correctAnswer: number;
+  content: {
+    text: string;
+    options: {
+      A: string;
+      B: string;
+      C: string;
+      D: string;
+    };
+    hint?: string;
+  };
+  correctAnswer: keyof typeof optionsMap; // "A", "B", "C", or "D"
   explanation: string;
-  type: "MCQ";
+  conceptId: number;
 }
 
-const SAMPLE_QUESTIONS: Question[] = [
-  {
-    id: 1,
-    questionText: "What is 12 × 12?",
-    options: ["144", "124", "122", "142"],
-    correctAnswer: 0,
-    explanation: "12 × 12 = 144. You can break it down as (10 + 2) × 12 = 120 + 24 = 144",
-    type: "MCQ",
-  },
-  {
-    id: 2,
-    questionText: "What is the capital of France?",
-    options: ["Lyon", "Paris", "Marseille", "Nice"],
-    correctAnswer: 1,
-    explanation: "Paris is the capital and largest city of France, located in the north-central part of the country.",
-    type: "MCQ",
-  },
-  {
-    id: 3,
-    questionText: "What is the chemical symbol for Gold?",
-    options: ["Go", "Gd", "Au", "Ag"],
-    correctAnswer: 2,
-    explanation: "Au is the chemical symbol for Gold, derived from its Latin name 'Aurum'.",
-    type: "MCQ",
-  },
-  {
-    id: 4,
-    questionText: "Which shape is shown in the image below?",
-    imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Square_shape.svg/440px-Square_shape.svg.png",
-    options: ["Circle", "Triangle", "Square", "Pentagon"],
-    correctAnswer: 2,
-    explanation: "A square is a regular quadrilateral with 4 equal sides and 4 right angles.",
-    type: "MCQ",
-  },
-];
+// Map option keys to array indices for QuestionCard
+const optionsMap = { A: 0, B: 1, C: 2, D: 3 } as const;
+const optionsReverseMap = { 0: "A", 1: "B", 2: "C", 3: "D" } as const;
 
 export default function Arena() {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const router = useRouter();
+  const { student, isLoading: isStudentLoading } = useStudent();
+
+  // Quiz state
+  const [currentQuestion, setCurrentQuestion] = useState<LocalQuestion | null>(null);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [totalXpEarned, setTotalXpEarned] = useState(0);
+  const [currentConceptId] = useState(1); // Will come from navigation/props
+
+  // UI state
   const [showFeedback, setShowFeedback] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
-  const [score, setScore] = useState(0);
-  const [mounted, setMounted] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [xpEarned, setXpEarned] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load progress from localStorage on mount
+  // ========================================================================
+  // STEP 1: Check authentication on mount
+  // ========================================================================
+
   useEffect(() => {
-    const savedState = typeof window !== "undefined" ? window.localStorage.getItem("quizState") : null;
-    if (savedState) {
-      try {
-        const { questionIndex, selectedAnswer, currentScore } = JSON.parse(savedState);
-        setCurrentQuestionIndex(questionIndex);
-        setSelectedAnswerIndex(selectedAnswer);
-        setScore(currentScore);
-      } catch {
-        // Ignore parse errors, use defaults
-      }
+    if (!isStudentLoading && !student) {
+      // Not logged in → redirect to login
+      console.log("⚠️  Student not logged in. Redirecting to /login");
+      router.push("/login");
     }
-    setMounted(true);
-  }, []);
+  }, [student, isStudentLoading, router]);
 
-  // Save progress to localStorage whenever state changes
+  // ========================================================================
+  // STEP 2: Fetch first question when component mounts and student is logged in
+  // ========================================================================
+
   useEffect(() => {
-    if (mounted && typeof window !== "undefined") {
-      window.localStorage.setItem(
-        "quizState",
-        JSON.stringify({
-          questionIndex: currentQuestionIndex,
-          selectedAnswer: selectedAnswerIndex,
-          currentScore: score,
-        })
+    if (student) {
+      loadNextQuestion();
+    }
+  }, [student]);
+
+  // ========================================================================
+  // STEP 3: Load next question from API
+  // ========================================================================
+
+  const loadNextQuestion = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setShowFeedback(false);
+      setSelectedAnswerIndex(null);
+
+      console.log(`📝 Fetching question for concept ${currentConceptId}...`);
+
+      // Call backend to get random question for this concept
+      const apiQuestion = await getRandomQuestion(currentConceptId);
+
+      // Convert API format to local format
+      const localQuestion: LocalQuestion = {
+        id: apiQuestion.id,
+        content: apiQuestion.content,
+        correctAnswer: apiQuestion.correct_option_key as "A" | "B" | "C" | "D",
+        explanation: apiQuestion.explanation,
+        conceptId: apiQuestion.concept_id,
+      };
+
+      setCurrentQuestion(localQuestion);
+      console.log("✅ Question loaded:", localQuestion.id);
+    } catch (err) {
+      console.error("❌ Failed to load question:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load question"
       );
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentQuestionIndex, selectedAnswerIndex, score, mounted]);
+  };
 
-  const currentQuestion = SAMPLE_QUESTIONS[currentQuestionIndex];
-  const isCorrect = selectedAnswerIndex === currentQuestion.correctAnswer;
+  // ========================================================================
+  // STEP 4: Handle answer selection and submit to API
+  // ========================================================================
 
-  const handleAnswerSelected = (answerIndex: number) => {
-    setIsSubmitting(true);
-    setSelectedAnswerIndex(answerIndex);
+  const handleAnswerSelected = async (answerIndex: number) => {
+    if (!student || !currentQuestion) return;
 
-    // Simulate API call delay
-    setTimeout(() => {
+    try {
+      setIsSubmitting(true);
+      setSelectedAnswerIndex(answerIndex);
+
+      // Convert array index (0-3) to option key (A-D)
+      const selectedOption = optionsReverseMap[answerIndex as 0 | 1 | 2 | 3];
+
+      console.log(`📤 Submitting answer: ${selectedOption} for question ${currentQuestion.id}`);
+
+      // Call backend to submit answer
+      const response: SubmitAnswerResponse = await submitAnswer(
+        currentQuestion.id,
+        student.id,
+        selectedOption,
+        30 // Assume ~30 seconds per question (you could track actual time)
+      );
+
+      console.log("✅ Answer submitted. Response:", response);
+
+      // Update UI with feedback
+      setIsCorrect(response.is_correct);
+      setXpEarned(response.xp_earned);
+      setFeedback(response.explanation);
       setShowFeedback(true);
-      if (answerIndex === currentQuestion.correctAnswer) {
-        setScore(score + 10);
-      }
-      setIsSubmitting(false);
-    }, 500);
-  };
 
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < SAMPLE_QUESTIONS.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setShowFeedback(false);
-      setSelectedAnswerIndex(null);
-    } else {
-      // Quiz completed
-      const finalScore = score + (isCorrect ? 10 : 0);
-      alert(`🎓 Quiz Complete! Your Score: ${finalScore} XP`);
-      // Reset quiz
-      setCurrentQuestionIndex(0);
-      setScore(0);
-      setShowFeedback(false);
-      setSelectedAnswerIndex(null);
-      window.localStorage.removeItem("quizState");
+      // Update totals
+      setQuestionsAnswered(questionsAnswered + 1);
+      setTotalXpEarned(totalXpEarned + response.xp_earned);
+
+      // Log mastery update
+      if (response.concept_mastery_score) {
+        console.log(`📊 Concept mastery updated: ${response.concept_mastery_score.toFixed(1)}%`);
+      }
+    } catch (err) {
+      console.error("❌ Failed to submit answer:", err);
+      setError(err instanceof Error ? err.message : "Failed to submit answer");
+      setShowFeedback(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // ========================================================================
+  // STEP 5: Handle next question or quiz completion
+  // ========================================================================
+
+  const handleNextQuestion = async () => {
+    // Continue to next question
+    await loadNextQuestion();
+  };
+
+  // ========================================================================
+  // RENDERING
+  // ========================================================================
+
+  // Loading state (checking authentication)
+  if (isStudentLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not logged in (shouldn't reach here due to useEffect redirect, but just in case)
+  if (!student) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No question loaded
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <p className="text-gray-600">
+            {error ? `Error: ${error}` : "Loading question..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Convert local question to format expected by QuestionCard
+  const questionCardData = {
+    id: currentQuestion.id,
+    questionText: currentQuestion.content.text,
+    hint: currentQuestion.content.hint,
+    imageUrl: undefined, // API doesn't have image URLs
+    options: [
+      currentQuestion.content.options.A,
+      currentQuestion.content.options.B,
+      currentQuestion.content.options.C,
+      currentQuestion.content.options.D,
+    ],
+    correctAnswer: optionsMap[currentQuestion.correctAnswer],
+    explanation: currentQuestion.explanation,
+    type: "MCQ" as const,
+  };
+
+  // Main quiz UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-4xl mx-auto">
@@ -130,35 +236,60 @@ export default function Arena() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Quiz Arena</h1>
           <p className="text-lg text-gray-600">Test your knowledge! 🚀</p>
-          <p className="text-sm text-gray-500 mt-2">Score: {score} XP</p>
+          <div className="mt-4 flex justify-center gap-8 text-sm">
+            <div className="bg-white px-4 py-2 rounded-lg shadow">
+              <p className="text-gray-600">Student</p>
+              <p className="text-lg font-semibold text-gray-800">{student.name}</p>
+            </div>
+            <div className="bg-white px-4 py-2 rounded-lg shadow">
+              <p className="text-gray-600">Questions Answered</p>
+              <p className="text-lg font-semibold text-indigo-600">{questionsAnswered}</p>
+            </div>
+            <div className="bg-white px-4 py-2 rounded-lg shadow">
+              <p className="text-gray-600">XP Earned</p>
+              <p className="text-lg font-semibold text-green-600">+{totalXpEarned}</p>
+            </div>
+          </div>
         </div>
 
-        {/* Progress Bar */}
-        {mounted && (
-          <>
-            <QuizProgress
-              currentQuestion={currentQuestionIndex + 1}
-              totalQuestions={SAMPLE_QUESTIONS.length}
-            />
+        {/* Progress */}
+        <QuizProgress currentQuestion={questionsAnswered + 1} totalQuestions={99} />
 
-            {/* Question Card */}
-            <div className="mb-8">
-              <QuestionCard
-                questionData={currentQuestion}
-                onAnswerSelected={handleAnswerSelected}
-                isSubmitting={isSubmitting}
-              />
+        {/* Question Card */}
+        <div className="mb-8">
+          <QuestionCard
+            questionData={questionCardData}
+            onAnswerSelected={handleAnswerSelected}
+            isSubmitting={isSubmitting}
+          />
+        </div>
+
+        {/* Feedback Overlay */}
+        {showFeedback && (
+          <FeedbackOverlay
+            isCorrect={isCorrect}
+            explanation={feedback}
+            xpEarned={xpEarned}
+            onNext={handleNextQuestion}
+          />
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <p className="font-bold">Error</p>
+            <p>{error}</p>
+          </div>
+        )}
+
+        {/* Loading Indicator during submission */}
+        {isSubmitting && (
+          <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center">
+            <div className="bg-white p-8 rounded-lg shadow-lg">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Submitting answer...</p>
             </div>
-
-            {/* Feedback Overlay */}
-            {showFeedback && (
-              <FeedbackOverlay
-                isCorrect={isCorrect}
-                explanation={currentQuestion.explanation}
-                onNext={handleNextQuestion}
-              />
-            )}
-          </>
+          </div>
         )}
       </div>
     </div>

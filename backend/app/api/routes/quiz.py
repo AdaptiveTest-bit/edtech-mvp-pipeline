@@ -57,7 +57,7 @@ async def get_question(
 @router.get("/random/{concept_id}", response_model=QuestionResponse)
 async def get_random_question(
     concept_id: int,
-    difficulty: int = 2,
+    difficulty: int = None,
     db: Session = Depends(get_db)
 ):
     """Get random question from concept (for spaced repetition)"""

@@ -24,13 +24,16 @@ class QuizService:
     def get_random_question(
         db: Session,
         concept_id: int,
-        difficulty: int = 2
+        difficulty: int = None
     ) -> Question:
         """Get random question from concept"""
-        question = db.query(Question).filter(
-            Question.concept_id == concept_id,
-            Question.difficulty_level == difficulty
-        ).order_by(func.random()).first()
+        query = db.query(Question).filter(Question.concept_id == concept_id)
+        
+        # Only filter by difficulty if specified
+        if difficulty is not None:
+            query = query.filter(Question.difficulty_level == difficulty)
+        
+        question = query.order_by(func.random()).first()
         return question
     
     @staticmethod
