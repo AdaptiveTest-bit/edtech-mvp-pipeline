@@ -1,0 +1,33 @@
+.container {
+  padding: 1rem;
+}
+
+.title {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  margin: 0.25rem;
+  border-radius: 6px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.selected {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+  transform: translateY(-1px);
+  border-color: #1e40af;
+}
+
+.faded {
+  opacity: 0.45;
+  filter: grayscale(10%);
+}

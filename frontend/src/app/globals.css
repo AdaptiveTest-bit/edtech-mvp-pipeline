@@ -19,6 +19,31 @@
   }
 }
 
+.option-button {
+  background: var(--foreground);
+  color: var(--background);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  margin: 0.5rem 0;
+}
+
+.option-button:hover {
+  background: darken(var(--foreground), 5%);
+}
+
+/* 
+.question-card {
+  background: var(--background);
+  color: var(--foreground);
+  padding: 1.5rem;
+  border: 1px solid #eee;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+} */
+
 body {
   background: var(--background);
   color: var(--foreground);
