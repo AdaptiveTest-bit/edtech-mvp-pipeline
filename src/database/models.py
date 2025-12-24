@@ -79,22 +79,7 @@ class StudentCreateRequest(BaseModel):
     standard: str
     password: str
     parent_details: Optional[ParentCreateRequest]
-
-
-class QuizSubmissionCreate(BaseModel):
-    student_id: int
-    question_id: int
-    selected_answer_index: int
-    is_correct: bool
-    xp_earned: Optional[int] = 0
-    time_taken_seconds: Optional[int] = None
-    submitted_at: Optional[str] = None
-
-
-class StudentProgressCreate(BaseModel):
-    student_id: int
-    chapter_id: str
-    mastery_score: Optional[float] = 0.0
-    questions_completed: Optional[int] = 0
-    questions_correct: Optional[int] = 0
-    last_answered_at: Optional[str] = None
+    
+class StudentLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
