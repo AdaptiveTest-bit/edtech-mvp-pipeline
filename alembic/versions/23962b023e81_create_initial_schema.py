@@ -23,6 +23,7 @@ def upgrade() -> None:
         sa.Column('name', sa.VARCHAR(length=255), autoincrement=False, nullable=False),
         sa.Column('sequence_order', sa.INTEGER(), autoincrement=False, nullable=False),
         sa.Column('unit_tag', sa.VARCHAR(length=50), autoincrement=False, nullable=True),
+        sa.Column('chapter_name', sa.VARCHAR(length=255), autoincrement=False, nullable=True),
         sa.PrimaryKeyConstraint('id', name='chapters_pkey'),
         postgresql_ignore_search_path=False
     )
