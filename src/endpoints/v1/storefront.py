@@ -2,7 +2,6 @@
 # from sqlalchemy import text
 from fastapi.encoders import jsonable_encoder
 
-
 from fastapi import (
     APIRouter,
     status,
@@ -12,19 +11,20 @@ from starlette.responses import JSONResponse
 from src.database.models import (
     ChapterCreate,
     ResponseModel,
-    StudentCreateRequest
+    StudentCreateRequest,StudentLoginRequest
 )
 from src.database.repository import Chapter,Student,Parent
 from src.database.services import db_session
+from src.auth.auth_bearer import (verify_password,hash_password,create_student_token)
 
 
-router = APIRouter(prefix="/storefront", tags=["Suject--Collection)"])
+router = APIRouter(prefix="/storefront")
 
 
 @router.post(
-    "/add-student",
+    "/Regiater_Student",tags=["STUDENT"],response_model=ResponseModel
 )
-async def RegisterStudent(
+async def Register_Student(
     student_obj: StudentCreateRequest,
 ):
     try:
@@ -55,7 +55,7 @@ async def RegisterStudent(
             email=student_obj.email,
             gender=student_obj.gender,
             standard=student_obj.standard,
-            password_hash=student_obj.password)
+            password_hash=hash_password(student_obj.password))
         
 
         if student_obj.parent_details:
@@ -103,26 +103,88 @@ async def RegisterStudent(
             }
         )
 
-@router.get("/get_students")
-def get_Student(
-    student_id: int = Query(None),
-    email: str = Query(None),
-    phone: str = Query(None),
+
+@router.post(
+    "/login_student",
+    tags=["STUDENT"],
+    response_model=ResponseModel
+)
+def login_student(
+    payload: StudentLoginRequest,
 ):
     try:
-        if not any([student_id, email, phone]):
-            return JSONResponse(
-                status_code=400,
+        if payload.email and payload.password is None:
+            return ResponseModel(
+                status_code=status.HTTP_400_BAD_REQUEST,
                 content={
                     "success": False,
-                    "message": "Please provide student_id, email, or phone",
+                    "message": "Email and password are required",
                     "data": None,
                     "status_code": status.HTTP_400_BAD_REQUEST
                 }
             )
         with db_session() as db:
-            query = db.query(Student)
+            student = db.query(Student).filter(Student.email == payload.email).first()
+        
+        if not student or not verify_password(payload.password, student.password_hash):
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={
+                    "success": False,
+                    "message": "Invalid credentials",
+                    "data": None,
+                    "status_code": status.HTTP_401_UNAUTHORIZED
+                }
+            )
 
+        token = create_student_token(student)
+
+        data = {
+            "id": student.id,
+            "access_token": token
+        }
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "message": "Login successful",
+                "data": data,
+                "status_code": status.HTTP_200_OK
+            }
+        )
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "success": False,
+                "message": str(e) or "Unexpected error occurred",
+                "data": None,
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR
+            }
+        )
+
+
+@router.get(
+    "/get_students",
+    tags=["STUDENT"],
+    response_model=ResponseModel
+)
+def get_student(
+    student_id: int | None = Query(default=None),
+    email: str | None = Query(default=None),
+    phone: str | None = Query(default=None),
+):
+    if not any([student_id, email, phone]):
+        return ResponseModel(
+            success=False,
+            message="Please provide student_id, email, or phone",
+            data=None,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+                       
+    with db_session() as db:
+        query = db.query(Student.email, Student.phone,Student.id,Student.first_name,Student.standard)
         if student_id:
             query = query.filter(Student.id == student_id)
         if email:
@@ -132,37 +194,34 @@ def get_Student(
 
         student = query.first()
 
-        if not student:
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "success": False,
-                    "message": "Student not found",
-                    "data": None,
-                    "status_code": status.HTTP_404_NOT_FOUND
-                }
-            )
-
-        return {
-            "success": True,
-            "message": None,
-            "data": (student),
-            "status_code": status.HTTP_200_OK
-        }
-
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "message": str(e) or "Unexpected error occurred",
-                "data": None,
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR
-            }
+    if not student:
+        return ResponseModel(
+            success=False,
+            message="Student not found",
+            data=None,
+            status_code=status.HTTP_404_NOT_FOUND,
         )
 
+    student_data = {
+        "Id": student.id,
+        "First_name": student.first_name,
+        "Class": student.standard,
+        "Email": student.email,
+        "Phone": student.phone,
+        
+    }
+
+    return ResponseModel(
+        success=True,
+        data=student_data,
+        message=None,         
+        status_code=status.HTTP_200_OK,
+    )
+
+
+
 @router.post(
-    "/add-chapter",
+    "/add_chapter",tags=["CHAPTER"],
 )
 async def create_Chapter(
     chapter_create: ChapterCreate,
@@ -193,7 +252,7 @@ async def create_Chapter(
         return JSONResponse(content=error.dict(),status_code=500)
 
 
-@router.get("/all_chapters", response_model=ResponseModel)
+@router.get("/all_chapters",tags=["CHAPTER"], response_model=ResponseModel)
 async def get_all_chapters():
     try:
         with db_session() as db:
@@ -222,7 +281,7 @@ async def get_all_chapters():
         )
 
 
-@router.get("/chapters/{chapter_no}", response_model=ResponseModel)
+@router.get("/chapters/{chapter_no}", tags=["CHAPTER"],response_model=ResponseModel)
 async def get_chapter_by_number(chapter_no: int):
     try:
         with db_session() as db:
@@ -231,7 +290,6 @@ async def get_chapter_by_number(chapter_no: int):
             )
 
         if not chapter:
-            # Chapter not found, but return consistent ResponseModel
             response = ResponseModel(
                 success=False,
                 message=f"Chapter {chapter_no} not found.",
@@ -242,7 +300,6 @@ async def get_chapter_by_number(chapter_no: int):
                 content=response.dict(), status_code=status.HTTP_404_NOT_FOUND
             )
 
-        # Serialize the chapter using jsonable_encoder
         chapter_data = jsonable_encoder(chapter)
 
         response = ResponseModel(
