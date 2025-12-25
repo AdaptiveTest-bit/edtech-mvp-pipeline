@@ -53,6 +53,34 @@ async def get_student_streak(
     
     return streak
 
+@router.get("/{student_id}/mastery")
+async def get_all_student_mastery(
+    student_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get mastery for all concepts that student has attempted
+    
+    Returns: {
+        "concepts": [
+            {
+                "concept_id": int,
+                "concept_name": str,
+                "mastery_score": float (0-1),
+                "leitner_box": int (1-4),
+                "next_review_date": str (ISO format),
+                "status": str ("reviewing" or "review_needed")
+            }
+        ]
+    }
+    """
+    mastery_data = StudentService.get_all_concepts_mastery(db, student_id)
+    
+    if mastery_data is None:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    return mastery_data
+
 @router.get("/concept/{concept_id}/mastery", response_model=ConceptMastery)
 async def get_concept_mastery(
     student_id: int,

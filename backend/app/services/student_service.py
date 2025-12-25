@@ -95,6 +95,45 @@ class StudentService:
         }
     
     @staticmethod
+    def get_all_concepts_mastery(
+        db: Session,
+        student_id: int
+    ) -> Dict[str, Any]:
+        """Get mastery for all concepts that student has attempted"""
+        from datetime import date
+        
+        # Verify student exists
+        student = StudentService.get_student(db, student_id)
+        if not student:
+            return None
+        
+        # Get all StudentMastery records for this student, join with Concept info
+        mastery_records = db.query(StudentMastery, Concept).join(
+            Concept, StudentMastery.concept_id == Concept.id
+        ).filter(
+            StudentMastery.user_id == student_id
+        ).all()
+        
+        concepts = []
+        for mastery, concept in mastery_records:
+            # Determine status based on review date
+            is_review_needed = date.today() >= mastery.next_review_date
+            status = "review_needed" if is_review_needed else "reviewing"
+            
+            concepts.append({
+                "concept_id": mastery.concept_id,
+                "concept_name": concept.name,
+                "mastery_score": float(mastery.mastery_score),
+                "leitner_box": mastery.leitner_box,
+                "next_review_date": mastery.next_review_date.isoformat(),
+                "status": status
+            })
+        
+        return {
+            "concepts": concepts
+        }
+    
+    @staticmethod
     def get_student_streak(db: Session, student_id: int) -> Dict[str, Any]:
         """Get student streak information"""
         student = StudentService.get_student(db, student_id)

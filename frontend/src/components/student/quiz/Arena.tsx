@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import QuestionCard from "./QuestionCard";
 import FeedbackOverlay from "./FeedbackOverlay";
 import QuizProgress from "./QuizProgress";
@@ -43,6 +44,7 @@ export default function Arena() {
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [totalXpEarned, setTotalXpEarned] = useState(0);
   const [currentConceptId] = useState(1); // Will come from navigation/props
+  const [difficulty, setDifficulty] = useState<1 | 2>(1); // 1=Easy, 2=Hard
 
   // UI state
   const [showFeedback, setShowFeedback] = useState(false);
@@ -87,10 +89,10 @@ export default function Arena() {
       setShowFeedback(false);
       setSelectedAnswerIndex(null);
 
-      console.log(`📝 Fetching question for concept ${currentConceptId}...`);
+      console.log(`📝 Fetching question for concept ${currentConceptId}, difficulty ${difficulty}...`);
 
-      // Call backend to get random question for this concept
-      const apiQuestion = await getRandomQuestion(currentConceptId);
+      // Call backend to get random question for this concept with selected difficulty
+      const apiQuestion = await getRandomQuestion(currentConceptId, difficulty);
 
       // Convert API format to local format
       const localQuestion: LocalQuestion = {
@@ -105,9 +107,9 @@ export default function Arena() {
       console.log("✅ Question loaded:", localQuestion.id);
     } catch (err) {
       console.error("❌ Failed to load question:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to load question"
-      );
+      const errorMessage = err instanceof Error ? err.message : "Failed to load question";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -145,6 +147,13 @@ export default function Arena() {
       setFeedback(response.explanation);
       setShowFeedback(true);
 
+      // Show toast notification
+      if (response.is_correct) {
+        toast.success(`✨ Correct! +${response.xp_earned} XP`);
+      } else {
+        toast.error("❌ Incorrect. Try again!");
+      }
+
       // Update totals
       setQuestionsAnswered(questionsAnswered + 1);
       setTotalXpEarned(totalXpEarned + response.xp_earned);
@@ -155,8 +164,10 @@ export default function Arena() {
       }
     } catch (err) {
       console.error("❌ Failed to submit answer:", err);
-      setError(err instanceof Error ? err.message : "Failed to submit answer");
+      const errorMessage = err instanceof Error ? err.message : "Failed to submit answer";
+      setError(errorMessage);
       setShowFeedback(true);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -236,6 +247,33 @@ export default function Arena() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Quiz Arena</h1>
           <p className="text-lg text-gray-600">Test your knowledge! 🚀</p>
+          
+          {/* Difficulty Selector */}
+          <div className="mt-6 flex justify-center gap-4">
+            <button
+              onClick={() => setDifficulty(1)}
+              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+                difficulty === 1
+                  ? "bg-blue-600 text-white shadow-lg scale-105"
+                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              }`}
+              disabled={isLoading || isSubmitting}
+            >
+              📚 Easy
+            </button>
+            <button
+              onClick={() => setDifficulty(2)}
+              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+                difficulty === 2
+                  ? "bg-red-600 text-white shadow-lg scale-105"
+                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              }`}
+              disabled={isLoading || isSubmitting}
+            >
+              🔥 Hard
+            </button>
+          </div>
+          
           <div className="mt-4 flex justify-center gap-8 text-sm">
             <div className="bg-white px-4 py-2 rounded-lg shadow">
               <p className="text-gray-600">Student</p>
@@ -254,6 +292,17 @@ export default function Arena() {
 
         {/* Progress */}
         <QuizProgress currentQuestion={questionsAnswered + 1} totalQuestions={99} />
+
+        {/* Difficulty Indicator */}
+        <div className="text-center mb-4">
+          <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+            difficulty === 1
+              ? "bg-blue-100 text-blue-800"
+              : "bg-red-100 text-red-800"
+          }`}>
+            {difficulty === 1 ? "📚 Easy Mode" : "🔥 Hard Mode"}
+          </span>
+        </div>
 
         {/* Question Card */}
         <div className="mb-8">

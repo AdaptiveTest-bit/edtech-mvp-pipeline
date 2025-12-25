@@ -69,8 +69,8 @@ export default function RegisterPage() {
         token: response.token,
       });
 
-      // Redirect to quiz arena
-      router.push("/quiz/arena");
+      // Redirect to onboarding
+      router.push("/onboarding");
     } catch (err) {
       console.error("❌ Registration failed:", err);
       const errorMessage =

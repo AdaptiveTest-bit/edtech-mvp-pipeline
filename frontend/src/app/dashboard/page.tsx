@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudent } from "@/context/StudentContext";
 import { getStudentProgress } from "@/lib/api";
+import SubjectMapContainer from "@/components/student/dashboard/SubjectMapContainer";
+import MissionControl from "@/components/student/dashboard/MissionControl";
 
 interface Chapter {
   chapter_id: number;
@@ -66,17 +68,6 @@ export default function DashboardPage() {
 
   if (!progress) return null;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "mastered":
-        return "bg-green-100 text-green-800";
-      case "unlocked":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-8">
       {/* Header */}
@@ -120,57 +111,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Mission Section */}
+      <div className="mb-8">
+        <MissionControl />
+      </div>
+
       {/* Chapters Section */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-xl font-bold text-gray-900">Your Chapters</h2>
-          <p className="text-sm text-gray-600 mt-1">Track your progress across all chapters</p>
-        </div>
-
-        <div className="divide-y divide-gray-200">
-          {progress.chapters.length > 0 ? (
-            progress.chapters.map((chapter) => (
-              <div
-                key={chapter.chapter_id}
-                className="p-4 sm:p-6 hover:bg-gray-50 transition cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {chapter.name}
-                  </h3>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${getStatusColor(
-                      chapter.status
-                    )}`}
-                  >
-                    {chapter.status.charAt(0).toUpperCase() + chapter.status.slice(1)}
-                  </span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                  <div
-                    className="bg-gradient-to-r from-blue-600 to-blue-400 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${chapter.mastery_score}%` }}
-                  ></div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 flex-wrap gap-2">
-                  <span>
-                    {chapter.questions_correct}/{chapter.questions_completed} correct
-                  </span>
-                  <span className="font-semibold text-gray-900">
-                    {chapter.mastery_score.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-6 text-center text-gray-600">
-              No chapters available yet
-            </div>
-          )}
-        </div>
+      <div className="mb-8">
+        <SubjectMapContainer />
       </div>
 
       {/* Call to Action */}

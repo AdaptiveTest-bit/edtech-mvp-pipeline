@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { login } from "@/lib/api";
 import { useStudent } from "@/context/StudentContext";
 
@@ -24,12 +25,14 @@ export default function LoginPage() {
       // Validate inputs
       if (!email || !password) {
         setError("Email and password are required");
+        toast.error("Email and password are required");
         setIsLoading(false);
         return;
       }
 
       if (!email.includes("@")) {
         setError("Please enter a valid email address");
+        toast.error("Please enter a valid email address");
         setIsLoading(false);
         return;
       }
@@ -49,6 +52,9 @@ export default function LoginPage() {
         token: response.token,
       });
 
+      // Show success toast
+      toast.success(`Welcome back, ${response.name}! 🎉`);
+
       // Redirect to quiz arena
       router.push("/quiz/arena");
     } catch (err) {
@@ -56,6 +62,7 @@ export default function LoginPage() {
       const errorMessage =
         err instanceof Error ? err.message : "Login failed. Please try again.";
       setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

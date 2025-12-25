@@ -5,7 +5,7 @@ FastAPI application factory and configuration
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.routes import quiz, student, auth, progress
+from app.api.routes import quiz, student, auth, progress, onboarding, missions
 from app.database import Base, engine
 
 
@@ -41,6 +41,8 @@ def create_app() -> FastAPI:
     app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
     app.include_router(student.router, prefix="/api/student", tags=["student"])
     app.include_router(progress.router, prefix="/api/progress", tags=["progress"])
+    app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"])
+    app.include_router(missions.router, prefix="/api/missions", tags=["missions"])
     
     # Health check endpoint
     @app.get("/health")

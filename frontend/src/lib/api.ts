@@ -238,11 +238,15 @@ export async function fetchQuestion(questionId: number): Promise<Question> {
  *   3. Returns random question for review
  * Returns: Question object
  */
-export async function getRandomQuestion(conceptId: number): Promise<Question> {
-  log(`Fetching random question for concept: ${conceptId}`);
+export async function getRandomQuestion(
+  conceptId: number,
+  difficulty?: number
+): Promise<Question> {
+  const difficultyParam = difficulty ? `?difficulty=${difficulty}` : "";
+  log(`Fetching random question for concept: ${conceptId}, difficulty: ${difficulty || "any"}`);
 
   const response = await fetch(
-    `${API_BASE}/api/quiz/random/${conceptId}`
+    `${API_BASE}/api/quiz/random/${conceptId}${difficultyParam}`
   );
   return handleResponse<Question>(response);
 }
@@ -404,6 +408,162 @@ export function getApiDocsUrl(): string {
   return `${API_BASE}/docs`;
 }
 
+// ============================================================================
+// ONBOARDING API
+// ============================================================================
+
+/**
+ * Check if student has completed onboarding
+ */
+export async function getOnboardingStatus(studentId: number) {
+  try {
+    const url = `${API_BASE}/api/onboarding/status/${studentId}`;
+    log(`Fetching onboarding status`, url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`API Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    log(`Onboarding status fetched`, data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching onboarding status:", error);
+    throw error;
+  }
+}
+
+/**
+ * Save student's onboarding data
+ */
+export async function saveOnboarding(
+  studentId: number,
+  avatar: string,
+  goals: Record<string, boolean>,
+  baselineScore: number
+) {
+  try {
+    const url = `${API_BASE}/api/onboarding/save?student_id=${studentId}`;
+    log(`Saving onboarding data`, { avatar, goals, baselineScore });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        avatar,
+        goals,
+        baseline_score: baselineScore,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    log(`Onboarding saved successfully`, data);
+    return data;
+  } catch (error) {
+    console.error("Error saving onboarding:", error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// MISSIONS API
+// ============================================================================
+
+/**
+ * Mission data structure
+ */
+export interface Mission {
+  id: number;
+  title: string;
+  description: string;
+  reward_xp: number;
+  status: string;
+  due_date: string;
+}
+
+/**
+ * Get today's active mission for a student
+ */
+export async function getTodayMission(studentId: number) {
+  try {
+    const url = `${API_BASE}/api/missions/today/${studentId}`;
+    log(`Fetching today's mission`, url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`API Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    log(`Today's mission fetched`, data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching today's mission:", error);
+    // Graceful degradation - return empty mission
+    return { status: "no_mission", message: "No active mission today" };
+  }
+}
+
+/**
+ * Get all missions for a student
+ */
+export async function getMissionsList(studentId: number, status?: string) {
+  try {
+    const url = new URL(`${API_BASE}/api/missions/list/${studentId}`);
+    if (status) {
+      url.searchParams.append("status", status);
+    }
+    log(`Fetching missions list`, url.toString());
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      throw new Error(`API Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    log(`Missions list fetched`, data);
+    return data;
+  } catch (error) {
+    console.error("Error fetching missions:", error);
+    // Graceful degradation - return empty list
+    return { missions: [], count: 0 };
+  }
+}
+
+/**
+ * Mark a mission as completed
+ */
+export async function completeMission(studentId: number, missionId: number) {
+  try {
+    const url = `${API_BASE}/api/missions/${missionId}/complete?student_id=${studentId}`;
+    log(`Completing mission`, { missionId, studentId });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    log(`Mission completed successfully`, data);
+    return data;
+  } catch (error) {
+    console.error("Error completing mission:", error);
+    throw error;
+  }
+}
+
 export default {
   // Re-export all functions
   API_BASE,
@@ -419,4 +579,11 @@ export default {
   getStudentAnalytics,
   healthCheck,
   getApiDocsUrl,
+  // Onboarding
+  getOnboardingStatus,
+  saveOnboarding,
+  // Missions
+  getTodayMission,
+  getMissionsList,
+  completeMission,
 };

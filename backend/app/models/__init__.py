@@ -2,6 +2,8 @@
 from app.models.user import Student, Parent, StudentParentLink
 from app.models.curriculum import Chapter, Topic, Concept, Question
 from app.models.analytics import Attempt, StudentMastery, QuizSubmission, StudentProgress, DailyAnalytics
+from app.models.onboarding import OnboardingStatus
+from app.models.mission import Mission
 
 __all__ = [
     "Student",
@@ -16,4 +18,6 @@ __all__ = [
     "QuizSubmission",
     "StudentProgress",
     "DailyAnalytics",
+    "OnboardingStatus",
+    "Mission",
 ]
